@@ -1,5 +1,6 @@
 {
     "cSpell.words": [
         "Tetromino"
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "strict"
 }

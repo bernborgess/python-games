@@ -9,7 +9,7 @@ from panda3d.core import (
     WindowProperties,
 )
 from direct.task import Task
-import sys, math
+import sys
 
 
 def clamp(value, min_val, max_val):
@@ -28,22 +28,30 @@ class VoxelGame(ShowBase):
         self.win.requestProperties(props)
 
         # Set initial camera position and orientation.
-        self.camera.setPos(0, -10, 2)
+        self.camera.setPos(0, -15, 2)
         self.camera.setHpr(0, 0, 0)
 
         # Dictionary to keep track of blocks.
         # Keys are (x, y, z) tuples and values are the NodePaths for each block.
         self.blocks = {}
 
+        # This value defines the spacing between blocks (and their size).
+        self.block_spacing = 1.1
+
         # Load a cube model. Panda3D comes with a built-in cube in the "models/box" file.
         self.block_model = loader.loadModel("models/box")
-        # Scale the cube so that each block is 1x1x1 (the default cube is 2x2x2).
-        self.block_model.setScale(0.5)
+        # Scale the cube so that each block is 1.1x1.1x1.1 (since the default box is 2x2x2, scale=1.1/2 = 0.55).
+        self.block_model.setScale(0.55)
+        # Change the block color to a greenish hue.
+        self.block_model.setColor(0.2, 1.0, 0.2, 1.0)
         self.block_model.flattenLight()
 
-        # Build a simple flat world (e.g. a 21x21 grid centered at (0,0,0)).
-        for x in range(-10, 11):
-            for y in range(-10, 11):
+        # Build a simple flat world.
+        # Instead of using integer positions, we multiply by block_spacing so that blocks are exactly adjacent.
+        for ix in range(-10, 11):
+            for iy in range(-10, 11):
+                x = ix * self.block_spacing
+                y = iy * self.block_spacing
                 self.addBlock(x, y, 0)
 
         # Setup collision detection for mouse picking.
@@ -88,20 +96,22 @@ class VoxelGame(ShowBase):
         self.keyMap[key] = value
 
     def addBlock(self, x, y, z):
-        """Adds a block at the specified integer grid coordinate if one isn't already present."""
-        if (x, y, z) in self.blocks:
+        """Adds a block at the specified coordinate if one isn't already present."""
+        posKey = (x, y, z)
+        if posKey in self.blocks:
             return
         block = self.block_model.copyTo(render)
         block.setPos(x, y, z)
         # Enable collision on the block.
         block.setCollideMask(BitMask32.bit(1))
-        self.blocks[(x, y, z)] = block
+        self.blocks[posKey] = block
 
     def removeBlock(self, x, y, z):
         """Removes a block at the specified coordinate, if present."""
-        if (x, y, z) in self.blocks:
-            self.blocks[(x, y, z)].removeNode()
-            del self.blocks[(x, y, z)]
+        posKey = (x, y, z)
+        if posKey in self.blocks:
+            self.blocks[posKey].removeNode()
+            del self.blocks[posKey]
 
     def addBlockAtMouse(self):
         """Casts a ray from the camera to where the mouse is pointing and adds a block adjacent to the hit face."""
@@ -117,10 +127,11 @@ class VoxelGame(ShowBase):
             normal = entry.getSurfaceNormal(render)
             # Compute the position for the new block by offsetting half a unit in the direction of the hit normal.
             newPos = hitPos + normal * 0.5
+            # Round newPos to the nearest multiple of block_spacing.
             newBlockPos = (
-                int(round(newPos.getX())),
-                int(round(newPos.getY())),
-                int(round(newPos.getZ())),
+                round(newPos.getX() / self.block_spacing) * self.block_spacing,
+                round(newPos.getY() / self.block_spacing) * self.block_spacing,
+                round(newPos.getZ() / self.block_spacing) * self.block_spacing,
             )
             self.addBlock(*newBlockPos)
 
@@ -134,12 +145,11 @@ class VoxelGame(ShowBase):
         if self.pq.getNumEntries() > 0:
             self.pq.sortEntries()
             entry = self.pq.getEntry(0)
-            # The hit position approximates the center of the block.
             hitPos = entry.getSurfacePoint(render)
             blockPos = (
-                int(round(hitPos.getX())),
-                int(round(hitPos.getY())),
-                int(round(hitPos.getZ())),
+                round(hitPos.getX() / self.block_spacing) * self.block_spacing,
+                round(hitPos.getY() / self.block_spacing) * self.block_spacing,
+                round(hitPos.getZ() / self.block_spacing) * self.block_spacing,
             )
             self.removeBlock(*blockPos)
 

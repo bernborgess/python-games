@@ -1,2 +1,3 @@
 Panda3D==1.10.15
 pygame==2.6.1
+types-panda3d==0.4.1

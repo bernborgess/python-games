@@ -11,6 +11,10 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Simple Asteroids Game")
 clock = pygame.time.Clock()
 
+# Set up fonts
+font = pygame.font.SysFont(None, 48)
+small_font = pygame.font.SysFont(None, 32)
+
 # Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -118,7 +122,39 @@ class Bullet:
         )
 
 
-def main():
+def show_game_over_screen():
+    """Display the game over screen until the player presses R to restart or quits."""
+    while True:
+        screen.fill(BLACK)
+        # Render game over messages
+        game_over_text = font.render("GAME OVER", True, WHITE)
+        restart_text = small_font.render("Press R to Restart", True, WHITE)
+        quit_text = small_font.render("Press Q or close window to Quit", True, WHITE)
+
+        # Position texts at the center of the screen
+        screen.blit(
+            game_over_text, game_over_text.get_rect(center=(WIDTH / 2, HEIGHT / 2 - 50))
+        )
+        screen.blit(restart_text, restart_text.get_rect(center=(WIDTH / 2, HEIGHT / 2)))
+        screen.blit(quit_text, quit_text.get_rect(center=(WIDTH / 2, HEIGHT / 2 + 50)))
+        pygame.display.flip()
+
+        # Wait for events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    return  # Exit this loop and restart the game
+                if event.key == pygame.K_q:
+                    pygame.quit()
+                    exit()
+
+        clock.tick(60)
+
+
+def run_game():
     spaceship = Spaceship()
     asteroids = [Asteroid(size=3) for _ in range(5)]
     bullets = []
@@ -130,7 +166,8 @@ def main():
         # Event handling
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                running = False
+                pygame.quit()
+                exit()
 
             # Fire bullet when space is pressed
             if event.type == pygame.KEYDOWN:
@@ -174,8 +211,7 @@ def main():
                 spaceship.position.distance_to(asteroid.position)
                 < asteroid.radius + spaceship.radius
             ):
-                print("Game Over!")
-                running = False
+                running = False  # End game loop if collision occurs
 
         # Drawing
         screen.fill(BLACK)
@@ -186,7 +222,12 @@ def main():
             bullet.draw(screen)
         pygame.display.flip()
 
-    pygame.quit()
+
+def main():
+    while True:
+        run_game()
+        # When run_game() returns, a collision has occurred.
+        show_game_over_screen()
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ FPS = 60
 # Colors
 BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
+GREY = (50, 50, 50)  # Grey background
 COLORS = [
     (0, 255, 255),    # Cyan (I)
     (255, 165, 0),    # Orange (L)
@@ -54,6 +55,7 @@ class Game:
         self.current_piece = self.new_piece()
         self.next_piece = self.new_piece()
         self.game_over = False
+        self.paused = False  # Pause state
         self.fall_speed = 500
         self.last_fall = pygame.time.get_ticks()
 
@@ -105,7 +107,7 @@ class Game:
     def draw_grid(self):
         for y in range(GRID_HEIGHT):
             for x in range(GRID_WIDTH):
-                color = self.grid[y][x]
+                color = GREY if self.grid[y][x] == 0 else self.grid[y][x]
                 rect = pygame.Rect(x * BLOCK_SIZE, y * BLOCK_SIZE, 
                                  BLOCK_SIZE -1, BLOCK_SIZE -1)
                 pygame.draw.rect(self.screen, color, rect)
@@ -137,6 +139,12 @@ class Game:
         text = font.render(f"Score: {self.score}", True, WHITE)
         self.screen.blit(text, (GRID_WIDTH * BLOCK_SIZE + 10, 200))
 
+    def draw_pause(self):
+        font = pygame.font.Font(None, 48)
+        text = font.render("Paused", True, WHITE)
+        text_rect = text.get_rect(center=(WIDTH//2, HEIGHT//2))
+        self.screen.blit(text, text_rect)
+
     def draw_game_over(self):
         font = pygame.font.Font(None, 48)
         text = font.render("Game Over!", True, WHITE)
@@ -153,37 +161,43 @@ class Game:
                     self.game_over = True
                 
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_LEFT:
-                        if self.valid_move(self.current_piece, self.current_piece.x -1, self.current_piece.y, 0):
-                            self.current_piece.x -= 1
-                    if event.key == pygame.K_RIGHT:
-                        if self.valid_move(self.current_piece, self.current_piece.x +1, self.current_piece.y, 0):
-                            self.current_piece.x += 1
-                    if event.key == pygame.K_DOWN:
-                        if self.valid_move(self.current_piece, self.current_piece.x, self.current_piece.y +1, 0):
-                            self.current_piece.y += 1
-                    if event.key == pygame.K_UP:
-                        if self.valid_move(self.current_piece, self.current_piece.x, self.current_piece.y, 1):
-                            self.current_piece.shape = self.rotate_piece(self.current_piece, 1)
-                    if event.key == pygame.K_SPACE:
-                        while self.valid_move(self.current_piece, self.current_piece.x, self.current_piece.y +1, 0):
-                            self.current_piece.y += 1
-                        self.lock_piece(self.current_piece)
+                    if event.key == pygame.K_p:  # Pause on 'P' key
+                        self.paused = not self.paused
+                    if not self.paused:
+                        if event.key == pygame.K_LEFT:
+                            if self.valid_move(self.current_piece, self.current_piece.x -1, self.current_piece.y, 0):
+                                self.current_piece.x -= 1
+                        if event.key == pygame.K_RIGHT:
+                            if self.valid_move(self.current_piece, self.current_piece.x +1, self.current_piece.y, 0):
+                                self.current_piece.x += 1
+                        if event.key == pygame.K_DOWN:
+                            if self.valid_move(self.current_piece, self.current_piece.x, self.current_piece.y +1, 0):
+                                self.current_piece.y += 1
+                        if event.key == pygame.K_UP:
+                            if self.valid_move(self.current_piece, self.current_piece.x, self.current_piece.y, 1):
+                                self.current_piece.shape = self.rotate_piece(self.current_piece, 1)
+                        if event.key == pygame.K_SPACE:
+                            while self.valid_move(self.current_piece, self.current_piece.x, self.current_piece.y +1, 0):
+                                self.current_piece.y += 1
+                            self.lock_piece(self.current_piece)
 
-            # Automatic falling
-            if current_time - self.last_fall > self.fall_speed:
-                if self.valid_move(self.current_piece, self.current_piece.x, self.current_piece.y +1, 0):
-                    self.current_piece.y += 1
-                    self.last_fall = current_time
-                else:
-                    self.lock_piece(self.current_piece)
-                    self.last_fall = current_time
+            if not self.paused:
+                # Automatic falling
+                if current_time - self.last_fall > self.fall_speed:
+                    if self.valid_move(self.current_piece, self.current_piece.x, self.current_piece.y +1, 0):
+                        self.current_piece.y += 1
+                        self.last_fall = current_time
+                    else:
+                        self.lock_piece(self.current_piece)
+                        self.last_fall = current_time
 
             self.draw_grid()
             self.draw_piece(self.current_piece)
             self.draw_next_piece()
             self.draw_score()
             
+            if self.paused:
+                self.draw_pause()
             if self.game_over:
                 self.draw_game_over()
 
